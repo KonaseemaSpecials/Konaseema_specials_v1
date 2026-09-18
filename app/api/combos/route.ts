@@ -4,11 +4,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /* =========================================================
-   DEFAULT COMBO GOOGLE SHEET
+   COMBO GOOGLE SHEET
 ========================================================= */
 
 const DEFAULT_COMBO_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1VfHHO5eN8xHn8MNtmFWdgAXv7SuIt1Bs71SITE7lc_I/export?format=csv&gid=2085765302";
+  "https://docs.google.com/spreadsheets/d/1Xe2Sro3dVo2-B6RwSKtNvh59x9YcxDMWPhtBU1NcCLI/export?format=csv&gid=1593767452";
 
 /* =========================================================
    TYPES
@@ -27,7 +27,8 @@ type ComboProduct = {
 
   name: string;
 
-  category: "Combos & Value Packs";
+  category:
+    "Combos & Value Packs";
 
   image: string;
 
@@ -54,8 +55,14 @@ function normalizeHeader(
     .trim()
     .toLowerCase()
     .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(
+      /[^a-z0-9]+/g,
+      "_"
+    )
+    .replace(
+      /^_+|_+$/g,
+      ""
+    );
 }
 
 /* =========================================================
@@ -65,35 +72,44 @@ function normalizeHeader(
 function parseCSV(
   csvText: string
 ): CSVRow[] {
-  const text = String(
-    csvText ?? ""
-  ).replace(/^\uFEFF/, "");
+  const text =
+    String(
+      csvText ?? ""
+    ).replace(
+      /^\uFEFF/,
+      ""
+    );
 
-  const allRows: string[][] = [];
+  const allRows:
+    string[][] = [];
 
-  let currentRow: string[] = [];
+  let currentRow:
+    string[] = [];
+
   let currentCell = "";
-  let insideQuotes = false;
+
+  let insideQuotes =
+    false;
 
   for (
     let i = 0;
     i < text.length;
     i++
   ) {
-    const char = text[i];
+    const char =
+      text[i];
+
     const nextChar =
       text[i + 1];
-
-    /* -------------------------
-       QUOTES
-    ------------------------- */
 
     if (char === '"') {
       if (
         insideQuotes &&
         nextChar === '"'
       ) {
-        currentCell += '"';
+        currentCell +=
+          '"';
+
         i++;
       } else {
         insideQuotes =
@@ -102,10 +118,6 @@ function parseCSV(
 
       continue;
     }
-
-    /* -------------------------
-       COLUMN
-    ------------------------- */
 
     if (
       char === "," &&
@@ -119,10 +131,6 @@ function parseCSV(
 
       continue;
     }
-
-    /* -------------------------
-       ROW
-    ------------------------- */
 
     if (
       (char === "\n" ||
@@ -160,15 +168,13 @@ function parseCSV(
       continue;
     }
 
-    currentCell += char;
+    currentCell +=
+      char;
   }
 
-  /* -------------------------
-     FINAL ROW
-  ------------------------- */
-
   if (
-    currentCell.length > 0 ||
+    currentCell.length >
+      0 ||
     currentRow.length > 0
   ) {
     currentRow.push(
@@ -191,7 +197,8 @@ function parseCSV(
   }
 
   if (
-    allRows.length === 0
+    allRows.length ===
+    0
   ) {
     return [];
   }
@@ -203,26 +210,32 @@ function parseCSV(
 
   return allRows
     .slice(1)
-    .map((columns) => {
-      const row: CSVRow =
-        {};
+    .map(
+      (columns) => {
+        const row: CSVRow =
+          {};
 
-      headers.forEach(
-        (header, index) => {
-          if (!header) {
-            return;
+        headers.forEach(
+          (
+            header,
+            index
+          ) => {
+            if (!header) {
+              return;
+            }
+
+            row[header] =
+              String(
+                columns[
+                  index
+                ] ?? ""
+              ).trim();
           }
+        );
 
-          row[header] =
-            String(
-              columns[index] ??
-                ""
-            ).trim();
-        }
-      );
-
-      return row;
-    });
+        return row;
+      }
+    );
 }
 
 /* =========================================================
@@ -237,16 +250,20 @@ function pick(
     const key of keys
   ) {
     const normalized =
-      normalizeHeader(key);
+      normalizeHeader(
+        key
+      );
 
     const value =
       row[normalized];
 
     if (
-      value !== undefined &&
+      value !==
+        undefined &&
       value !== null &&
-      String(value).trim() !==
-        ""
+      String(
+        value
+      ).trim() !== ""
     ) {
       return String(
         value
@@ -264,9 +281,10 @@ function pick(
 function toNumber(
   value: any
 ): number {
-  const raw = String(
-    value ?? ""
-  ).trim();
+  const raw =
+    String(
+      value ?? ""
+    ).trim();
 
   if (!raw) {
     return 0;
@@ -294,19 +312,18 @@ function toNumber(
 
 /* =========================================================
    HTML CHECK
-
-   Detect Google login/private sheet response.
 ========================================================= */
 
 function looksLikeHTML(
   text: string
 ): boolean {
-  const start = String(
-    text ?? ""
-  )
-    .trim()
-    .toLowerCase()
-    .slice(0, 500);
+  const start =
+    String(
+      text ?? ""
+    )
+      .trim()
+      .toLowerCase()
+      .slice(0, 500);
 
   return (
     start.startsWith(
@@ -329,14 +346,24 @@ function looksLikeHTML(
 ========================================================= */
 
 export async function GET() {
+  /*
+    IMPORTANT:
+    Use NEXT_PUBLIC_COMBO_SHEET_URL first.
+
+    This prevents old COMBO_SHEET_URL
+    variables in Vercel from overriding
+    the current sheet.
+  */
   const sheetUrl =
-    process.env.COMBO_SHEET_URL?.trim() ||
-    process.env.NEXT_PUBLIC_COMBO_SHEET_URL?.trim() ||
+    process.env
+      .NEXT_PUBLIC_COMBO_SHEET_URL
+      ?.trim() ||
     DEFAULT_COMBO_SHEET_URL;
 
   try {
     console.log(
-      "Fetching combos from Google Sheet..."
+      "Fetching combos from:",
+      sheetUrl
     );
 
     const response =
@@ -345,7 +372,8 @@ export async function GET() {
         {
           method: "GET",
 
-          cache: "no-store",
+          cache:
+            "no-store",
 
           headers: {
             Accept:
@@ -354,7 +382,9 @@ export async function GET() {
         }
       );
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
       throw new Error(
         `Google combo sheet request failed: ${response.status} ${response.statusText}`
       );
@@ -382,14 +412,17 @@ export async function GET() {
     }
 
     const rows =
-      parseCSV(csvText);
+      parseCSV(
+        csvText
+      );
 
     console.log(
       `Google combo sheet rows: ${rows.length}`
     );
 
     if (
-      rows.length === 0
+      rows.length ===
+      0
     ) {
       throw new Error(
         "No rows were found in the combo Google Sheet."
@@ -402,23 +435,13 @@ export async function GET() {
         ComboProduct
       > = {};
 
-    /*
-      Support combo sheets where the combo ID/name
-      only appears on the first row and following
-      item rows are blank.
-
-      Example:
-
-      C01 | Godavari Combo | ...
-          |                | item 2
-          |                | item 3
-    */
-
-    let currentComboId = "";
+    let currentComboId =
+      "";
 
     for (
       let index = 0;
-      index < rows.length;
+      index <
+      rows.length;
       index++
     ) {
       const row =
@@ -436,15 +459,16 @@ export async function GET() {
           "combo_code",
         ]);
 
-      if (rowComboId) {
+      if (
+        rowComboId
+      ) {
         currentComboId =
           rowComboId;
       }
 
-      /*
-        No combo has started yet.
-      */
-      if (!currentComboId) {
+      if (
+        !currentComboId
+      ) {
         continue;
       }
 
@@ -535,7 +559,8 @@ export async function GET() {
           total_weight:
             totalWeight,
 
-          is_combo: true,
+          is_combo:
+            true,
 
           items: [],
         };
@@ -545,12 +570,6 @@ export async function GET() {
         comboMap[
           comboId
         ];
-
-      /*
-        If combo-level details were blank
-        on the first row, fill them from
-        later rows.
-      */
 
       if (
         comboName &&
@@ -574,7 +593,8 @@ export async function GET() {
       }
 
       if (
-        combo.price <= 0 &&
+        combo.price <=
+          0 &&
         comboPrice > 0
       ) {
         combo.price =
@@ -582,7 +602,8 @@ export async function GET() {
       }
 
       if (
-        !combo.total_weight &&
+        !combo
+          .total_weight &&
         totalWeight
       ) {
         combo.total_weight =
@@ -633,10 +654,11 @@ export async function GET() {
     );
 
     if (
-      combos.length === 0
+      combos.length ===
+      0
     ) {
       console.warn(
-        "Combo CSV downloaded successfully, but no combos were mapped."
+        "Combo CSV downloaded successfully but no combos were mapped."
       );
 
       console.warn(
