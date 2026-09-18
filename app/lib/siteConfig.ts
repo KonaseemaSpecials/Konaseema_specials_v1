@@ -13,7 +13,7 @@ const clean = (value?: string) =>
   becomes:
   919618851406
 */
-const DEFAULT_WHATSAPP_NUMBER = "919618851406";
+const DEFAULT_WHATSAPP_NUMBER = "919121894446";
 
 export const siteConfig = {
   whatsappNumber: clean(
