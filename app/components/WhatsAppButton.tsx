@@ -1,6 +1,5 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
 import { getWhatsAppUrl, siteConfig } from "../lib/siteConfig";
 
 export default function WhatsAppButton() {
@@ -16,8 +15,8 @@ export default function WhatsAppButton() {
       href={getWhatsAppUrl(message)}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Chat with us on WhatsApp"
-      title="WhatsApp"
+      aria-label="Chat with Godavari Basket"
+      title="Chat with us"
       className="
         relative
         flex
@@ -26,7 +25,7 @@ export default function WhatsAppButton() {
         items-center
         justify-center
         rounded-full
-        bg-[#25D366]
+        bg-[#173F35]
         text-white
         shadow-sm
         transition-all
@@ -36,12 +35,21 @@ export default function WhatsAppButton() {
         active:scale-95
       "
     >
-      <MessageCircle
-        size={21}
-        strokeWidth={2.2}
-      />
+      {/* Thought Bubble */}
+      <span
+        className="
+          flex
+          items-center
+          justify-center
+          text-[23px]
+          leading-none
+        "
+        aria-hidden="true"
+      >
+        💭
+      </span>
 
-      {/* Small online indicator */}
+      {/* Online indicator */}
       <span
         className="
           absolute
@@ -52,7 +60,7 @@ export default function WhatsAppButton() {
           rounded-full
           border-2
           border-white
-          bg-[#0f5132]
+          bg-[#22c55e]
         "
       />
     </a>
