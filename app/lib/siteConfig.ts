@@ -23,7 +23,7 @@ export const siteConfig = {
   contactPhoneDisplay:
     clean(
       process.env.NEXT_PUBLIC_CONTACT_PHONE_DISPLAY
-    ) || "+91 96188 51406",
+    ) || "+91 9121894446",
 
   contactEmail: clean(
     process.env.NEXT_PUBLIC_CONTACT_EMAIL
