@@ -8,19 +8,10 @@ export const revalidate = 0;
 
 /* =========================================================
    GOOGLE SHEET URL
-
-   First preference:
-   PRODUCTS_SHEET_URL
-
-   Second preference:
-   NEXT_PUBLIC_PRODUCTS_SHEET_URL
-
-   Final fallback:
-   Your current Google Sheet.
 ========================================================= */
 
 const DEFAULT_PRODUCTS_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1VfHHO5eN8xHn8MNtmFWdgAXv7SuIt1Bs71SITE7lc_I/export?format=csv&gid=0";
+  "https://docs.google.com/spreadsheets/d/1Xe2Sro3dVo2-B6RwSKtNvh59x9YcxDMWPhtBU1NcCLI/export?format=csv&gid=1350819211";
 
 /* =========================================================
    TYPES
@@ -49,13 +40,6 @@ type CSVRow = Record<string, string>;
 
 /* =========================================================
    NORMALIZE COLUMN HEADERS
-
-   These all become predictable:
-
-   Product ID       → product_id
-   product id       → product_id
-   PRODUCT-ID       → product_id
-   Price 250g USD   → price_250g_usd
 ========================================================= */
 
 function normalizeHeader(value: string): string {
@@ -70,24 +54,13 @@ function normalizeHeader(value: string): string {
 
 /* =========================================================
    CSV PARSER
-
-   Important:
-   DO NOT use csv.split(",")
-
-   Product descriptions/names can contain commas.
-
-   This parser handles:
-
-   - commas inside quoted values
-   - escaped quotes ""
-   - multiline cells
-   - Windows \r\n
-   - Google Sheets CSV
 ========================================================= */
 
 function parseCSV(csvText: string): CSVRow[] {
-  const text = String(csvText ?? "")
-    .replace(/^\uFEFF/, "");
+  const text = String(csvText ?? "").replace(
+    /^\uFEFF/,
+    ""
+  );
 
   const allRows: string[][] = [];
 
@@ -99,14 +72,7 @@ function parseCSV(csvText: string): CSVRow[] {
     const char = text[i];
     const nextChar = text[i + 1];
 
-    /*
-      Quoted values
-    */
     if (char === '"') {
-      /*
-        "" inside a quoted cell means
-        literal "
-      */
       if (
         insideQuotes &&
         nextChar === '"'
@@ -120,10 +86,6 @@ function parseCSV(csvText: string): CSVRow[] {
       continue;
     }
 
-    /*
-      Comma = next column,
-      but only when outside quotes.
-    */
     if (
       char === "," &&
       !insideQuotes
@@ -133,18 +95,11 @@ function parseCSV(csvText: string): CSVRow[] {
       continue;
     }
 
-    /*
-      New line = next row,
-      but only outside quotes.
-    */
     if (
       (char === "\n" ||
         char === "\r") &&
       !insideQuotes
     ) {
-      /*
-        Windows CRLF
-      */
       if (
         char === "\r" &&
         nextChar === "\n"
@@ -157,7 +112,9 @@ function parseCSV(csvText: string): CSVRow[] {
       const rowHasContent =
         currentRow.some(
           (value) =>
-            String(value ?? "").trim() !== ""
+            String(
+              value ?? ""
+            ).trim() !== ""
         );
 
       if (rowHasContent) {
@@ -173,9 +130,6 @@ function parseCSV(csvText: string): CSVRow[] {
     currentCell += char;
   }
 
-  /*
-    Final row
-  */
   if (
     currentCell.length > 0 ||
     currentRow.length > 0
@@ -185,7 +139,9 @@ function parseCSV(csvText: string): CSVRow[] {
     const rowHasContent =
       currentRow.some(
         (value) =>
-          String(value ?? "").trim() !== ""
+          String(
+            value ?? ""
+          ).trim() !== ""
       );
 
     if (rowHasContent) {
@@ -197,15 +153,11 @@ function parseCSV(csvText: string): CSVRow[] {
     return [];
   }
 
-  /*
-    First row = headers
-  */
   const headers =
-    allRows[0].map(normalizeHeader);
+    allRows[0].map(
+      normalizeHeader
+    );
 
-  /*
-    Convert rows to objects
-  */
   return allRows
     .slice(1)
     .map((columns) => {
@@ -227,16 +179,6 @@ function parseCSV(csvText: string): CSVRow[] {
 
 /* =========================================================
    GET FIRST MATCHING COLUMN
-
-   Allows different Google Sheet heading names.
-
-   Example:
-
-   product_id
-   id
-   sku
-
-   can all be accepted.
 ========================================================= */
 
 function pick(
@@ -247,7 +189,8 @@ function pick(
     const normalized =
       normalizeHeader(key);
 
-    const value = row[normalized];
+    const value =
+      row[normalized];
 
     if (
       value !== undefined &&
@@ -263,14 +206,6 @@ function pick(
 
 /* =========================================================
    NUMBER CONVERSION
-
-   Supports:
-
-   12
-   12.99
-   $12.99
-   USD 12.99
-   1,299.99
 ========================================================= */
 
 function toNumber(value: any): number {
@@ -282,16 +217,18 @@ function toNumber(value: any): number {
     return 0;
   }
 
-  const cleaned = raw.replace(
-    /[^0-9.-]/g,
-    ""
-  );
+  const cleaned =
+    raw.replace(
+      /[^0-9.-]/g,
+      ""
+    );
 
   if (!cleaned) {
     return 0;
   }
 
-  const number = Number(cleaned);
+  const number =
+    Number(cleaned);
 
   return Number.isFinite(number)
     ? number
@@ -300,22 +237,6 @@ function toNumber(value: any): number {
 
 /* =========================================================
    BOOLEAN CONVERSION
-
-   TRUE VALUES:
-   true
-   1
-   yes
-   y
-   live
-   active
-
-   FALSE VALUES:
-   false
-   0
-   no
-   n
-   inactive
-   hidden
 ========================================================= */
 
 function toBoolean(
@@ -364,38 +285,47 @@ function toBoolean(
 }
 
 /* =========================================================
-   CREATE STABLE ID WHEN ID COLUMN IS EMPTY
+   CREATE STABLE ID
 ========================================================= */
 
 function slugify(value: string): string {
   return String(value ?? "")
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    );
 }
 
 /* =========================================================
-   CHECK IF GOOGLE RETURNED HTML INSTEAD OF CSV
-
-   This usually happens when:
-   - sheet is private
-   - Google redirects to login
-   - sharing is not configured correctly
+   CHECK FOR HTML / GOOGLE LOGIN PAGE
 ========================================================= */
 
 function looksLikeHTML(
   text: string
 ): boolean {
-  const start = String(text ?? "")
+  const start = String(
+    text ?? ""
+  )
     .trim()
     .toLowerCase()
     .slice(0, 500);
 
   return (
-    start.startsWith("<!doctype html") ||
-    start.startsWith("<html") ||
-    start.includes("<head>") ||
+    start.startsWith(
+      "<!doctype html"
+    ) ||
+    start.startsWith(
+      "<html"
+    ) ||
+    start.includes(
+      "<head>"
+    ) ||
     start.includes(
       "accounts.google.com"
     )
@@ -403,17 +333,13 @@ function looksLikeHTML(
 }
 
 /* =========================================================
-   CONVERT ONE GOOGLE SHEET ROW TO PRODUCT
+   CONVERT SHEET ROW TO PRODUCT
 ========================================================= */
 
 function rowToProduct(
   row: CSVRow,
   rowIndex: number
 ): ProductFromSheet | null {
-  /* -------------------------
-     NAME
-  ------------------------- */
-
   const name = pick(row, [
     "product_name",
     "name",
@@ -421,16 +347,9 @@ function rowToProduct(
     "product",
   ]);
 
-  /*
-    Completely empty row.
-  */
   if (!name) {
     return null;
   }
-
-  /* -------------------------
-     ID
-  ------------------------- */
 
   const rawId = pick(row, [
     "product_id",
@@ -442,11 +361,9 @@ function rowToProduct(
 
   const id =
     rawId ||
-    `${slugify(name)}-${rowIndex + 1}`;
-
-  /* -------------------------
-     CATEGORY
-  ------------------------- */
+    `${slugify(name)}-${
+      rowIndex + 1
+    }`;
 
   const category =
     pick(row, [
@@ -456,20 +373,12 @@ function rowToProduct(
       "catalog",
     ]) || "Other";
 
-  /* -------------------------
-     DESCRIPTION
-  ------------------------- */
-
   const desc = pick(row, [
     "description",
     "desc",
     "product_description",
     "details",
   ]);
-
-  /* -------------------------
-     IMAGE
-  ------------------------- */
 
   const image = pick(row, [
     "image_url",
@@ -479,10 +388,6 @@ function rowToProduct(
     "photo_url",
     "photo",
   ]);
-
-  /* -------------------------
-     250g PRICE
-  ------------------------- */
 
   let price250 = toNumber(
     pick(row, [
@@ -494,10 +399,6 @@ function rowToProduct(
     ])
   );
 
-  /* -------------------------
-     500g PRICE
-  ------------------------- */
-
   let price500 = toNumber(
     pick(row, [
       "price_500g_usd",
@@ -507,10 +408,6 @@ function rowToProduct(
       "500_g",
     ])
   );
-
-  /* -------------------------
-     1kg PRICE
-  ------------------------- */
 
   let price1kg = toNumber(
     pick(row, [
@@ -523,33 +420,26 @@ function rowToProduct(
     ])
   );
 
-  /* =====================================================
-     FALLBACK FOR SHEETS USING:
+  const genericPrice =
+    toNumber(
+      pick(row, [
+        "price_usd",
+        "selling_price_usd",
+        "selling_price",
+        "seller_price",
+        "price",
+      ])
+    );
 
-     size | price
-
-     instead of separate:
-     250g | 500g | 1kg
-  ===================================================== */
-
-  const genericPrice = toNumber(
+  const genericSize =
     pick(row, [
-      "price_usd",
-      "selling_price_usd",
-      "selling_price",
-      "seller_price",
-      "price",
+      "size",
+      "weight",
+      "pack_size",
+      "pack",
     ])
-  );
-
-  const genericSize = pick(row, [
-    "size",
-    "weight",
-    "pack_size",
-    "pack",
-  ])
-    .toLowerCase()
-    .replace(/\s+/g, "");
+      .toLowerCase()
+      .replace(/\s+/g, "");
 
   if (
     price250 <= 0 &&
@@ -561,22 +451,17 @@ function rowToProduct(
       genericSize === "250g" ||
       genericSize === "250gm"
     ) {
-      price250 = genericPrice;
+      price250 =
+        genericPrice;
     } else if (
       genericSize === "500g" ||
       genericSize === "500gm"
     ) {
-      price500 = genericPrice;
+      price500 =
+        genericPrice;
     } else {
-      /*
-        Existing website only supports
-        250g / 500g / 1kg product variants.
-
-        If no matching size is supplied,
-        use 1kg as the default slot so
-        the product still displays.
-      */
-      price1kg = genericPrice;
+      price1kg =
+        genericPrice;
     }
   }
 
@@ -587,10 +472,6 @@ function rowToProduct(
       "1kg": price1kg,
     };
 
-  /* -------------------------
-     DEFAULT WEIGHT
-  ------------------------- */
-
   let defaultWeight:
     | "250g"
     | "500g"
@@ -598,36 +479,32 @@ function rowToProduct(
 
   if (price250 > 0) {
     defaultWeight = "250g";
-  } else if (price500 > 0) {
+  } else if (
+    price500 > 0
+  ) {
     defaultWeight = "500g";
-  } else if (price1kg > 0) {
+  } else if (
+    price1kg > 0
+  ) {
     defaultWeight = "1kg";
   }
 
-  /* -------------------------
-     STOCK
-  ------------------------- */
+  let outOfStock =
+    toBoolean(
+      pick(row, [
+        "out_of_stock",
+        "outofstock",
+        "sold_out",
+      ]),
+      false
+    );
 
-  let outOfStock = toBoolean(
+  const stockValue =
     pick(row, [
-      "out_of_stock",
-      "outofstock",
-      "sold_out",
-    ]),
-    false
-  );
-
-  /*
-    Also understand a numeric stock column.
-
-    stock = 0 → out of stock
-    stock = 10 → available
-  */
-  const stockValue = pick(row, [
-    "stock",
-    "quantity",
-    "inventory",
-  ]);
+      "stock",
+      "quantity",
+      "inventory",
+    ]);
 
   if (stockValue !== "") {
     const stockNumber =
@@ -638,20 +515,17 @@ function rowToProduct(
     }
   }
 
-  /* -------------------------
-     LIVE / ACTIVE
-  ------------------------- */
-
-  const isLive = toBoolean(
-    pick(row, [
-      "is_live",
-      "live",
-      "active",
-      "is_active",
-      "published",
-    ]),
-    true
-  );
+  const isLive =
+    toBoolean(
+      pick(row, [
+        "is_live",
+        "live",
+        "active",
+        "is_active",
+        "published",
+      ]),
+      true
+    );
 
   return {
     id,
@@ -660,16 +534,20 @@ function rowToProduct(
     desc,
     image,
 
-    out_of_stock: outOfStock,
+    out_of_stock:
+      outOfStock,
 
     is_live: isLive,
 
     prices,
 
-    weight: defaultWeight,
+    weight:
+      defaultWeight,
 
     price:
-      prices[defaultWeight] ?? 0,
+      prices[
+        defaultWeight
+      ] ?? 0,
   };
 }
 
@@ -678,29 +556,41 @@ function rowToProduct(
 ========================================================= */
 
 export async function GET() {
+  /*
+    IMPORTANT:
+    Use NEXT_PUBLIC_PRODUCTS_SHEET_URL first.
+
+    This prevents an old PRODUCTS_SHEET_URL
+    value in Vercel from overriding the
+    current sheet.
+  */
   const sheetUrl =
-    process.env.PRODUCTS_SHEET_URL?.trim() ||
-    process.env.NEXT_PUBLIC_PRODUCTS_SHEET_URL?.trim() ||
+    process.env
+      .NEXT_PUBLIC_PRODUCTS_SHEET_URL
+      ?.trim() ||
     DEFAULT_PRODUCTS_SHEET_URL;
 
   try {
     console.log(
-      "Fetching products from Google Sheet..."
+      "Fetching products from:",
+      sheetUrl
     );
 
-    const response = await fetch(
-      sheetUrl,
-      {
-        method: "GET",
+    const response =
+      await fetch(
+        sheetUrl,
+        {
+          method: "GET",
 
-        cache: "no-store",
+          cache:
+            "no-store",
 
-        headers: {
-          Accept:
-            "text/csv,text/plain,*/*",
-        },
-      }
-    );
+          headers: {
+            Accept:
+              "text/csv,text/plain,*/*",
+          },
+        }
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -717,20 +607,28 @@ export async function GET() {
       );
     }
 
-    if (looksLikeHTML(csvText)) {
+    if (
+      looksLikeHTML(
+        csvText
+      )
+    ) {
       throw new Error(
         "Google returned an HTML/login page instead of CSV. Make sure the Google Sheet is shared as 'Anyone with the link - Viewer'."
       );
     }
 
     const rows =
-      parseCSV(csvText);
+      parseCSV(
+        csvText
+      );
 
     console.log(
       `Google product sheet rows: ${rows.length}`
     );
 
-    if (rows.length === 0) {
+    if (
+      rows.length === 0
+    ) {
       throw new Error(
         "No rows were found in the Google Sheet CSV."
       );
@@ -738,11 +636,15 @@ export async function GET() {
 
     const products =
       rows
-        .map((row, index) =>
-          rowToProduct(
+        .map(
+          (
             row,
             index
-          )
+          ) =>
+            rowToProduct(
+              row,
+              index
+            )
         )
         .filter(
           (
@@ -755,22 +657,18 @@ export async function GET() {
       `Products successfully mapped: ${products.length}`
     );
 
-    /*
-      Helpful diagnostic logging.
-
-      You can see this in:
-      terminal locally
-      or
-      Vercel → Logs
-    */
-    if (products.length === 0) {
+    if (
+      products.length === 0
+    ) {
       console.warn(
-        "CSV was downloaded but no products were mapped."
+        "CSV downloaded successfully but no products were mapped."
       );
 
       console.warn(
         "Detected sheet columns:",
-        Object.keys(rows[0] || {})
+        Object.keys(
+          rows[0] || {}
+        )
       );
     }
 
@@ -784,11 +682,15 @@ export async function GET() {
             "no-store, no-cache, must-revalidate",
 
           "X-Products-Count":
-            String(products.length),
+            String(
+              products.length
+            ),
         },
       }
     );
-  } catch (error: any) {
+  } catch (
+    error: any
+  ) {
     console.error(
       "PRODUCT SHEET ERROR:",
       error
