@@ -1,31 +1,13 @@
-const clean = (value?: string) => (value ?? "").trim();
-
 export const siteConfig = {
-  // WhatsApp number — removes +, spaces, brackets, etc.
-  // Example: +91 91218 94446 → 919121894446
-  whatsappNumber: clean(
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
-  ).replace(/[^0-9]/g, ""),
+  whatsappNumber: "919121894446",
 
-  // Number displayed on website
-  contactPhoneDisplay: clean(
-    process.env.NEXT_PUBLIC_CONTACT_PHONE_DISPLAY
-  ),
+  contactPhoneDisplay: "+91 91218 94446",
 
-  // Contact email
-  contactEmail: clean(
-    process.env.NEXT_PUBLIC_CONTACT_EMAIL
-  ),
+  contactEmail: "konaseemaspecials4@gmail.com",
 
-  // Instagram username
-  instagramHandle: clean(
-    process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE
-  ),
+  instagramHandle: "",
 
-  // Instagram profile URL
-  instagramUrl: clean(
-    process.env.NEXT_PUBLIC_INSTAGRAM_URL
-  ),
+  instagramUrl: "",
 };
 
 export function getWhatsAppUrl(message?: string) {
