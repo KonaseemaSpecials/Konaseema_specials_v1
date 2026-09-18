@@ -3,7 +3,7 @@ export const siteConfig = {
 
   contactPhoneDisplay: "+91 91218 94446",
 
-  contactEmail: "konaseemaspecials4@gmail.com",
+  contactEmail:"konaseemaspecials4@gmail.com",
 
   instagramHandle: "",
 
