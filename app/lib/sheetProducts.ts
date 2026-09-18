@@ -22,6 +22,7 @@ export type ProductFromSheet = {
   category: string;
   desc?: string;
   image: string;
+
   out_of_stock: boolean;
   is_live: boolean;
 
@@ -32,87 +33,342 @@ export type ProductFromSheet = {
 };
 
 /* =========================================================
-   TEMPORARY TEST PRODUCT 2
-   Delete this object and remove TEST_PRODUCT_2 from the
-   return statements below after you finish cart/toast testing.
+   NORMALIZE GOOGLE SHEET COLUMN NAMES
+
+   Examples:
+   Product ID     -> product_id
+   product_id     -> product_id
+   Price 250g USD -> price_250g_usd
 ========================================================= */
-const TEST_PRODUCT_2: ProductFromSheet = {
-  id: "test-product-2",
-  name: "Test Product 2",
-  category: "Sweets",
-  desc: "Temporary test product for checking the product card, cart and toast message.",
-  image: "/images/Pootharekulu.jpg",
-  out_of_stock: false,
-  is_live: true,
-  prices: {
-    "250g": 9.99,
-    "500g": 17.99,
-    "1kg": 32.99,
-  },
-  weight: "250g",
-  price: 9.99,
-};
-
-const toBool = (v: any) => String(v ?? "").trim().toLowerCase() === "true";
-
-const toNum = (v: any) => {
-  const s = String(v ?? "").trim();
-  if (!s) return 0;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
-};
-
-function cleanRowKeys<T extends Record<string, any>>(row: T): T {
-  const out: any = {};
-  for (const k of Object.keys(row)) out[String(k).trim()] = row[k];
-  return out;
+function normalizeHeader(value: string) {
+  return String(value ?? "")
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^\w]/g, "");
 }
 
-export async function getProductsFromSheet(): Promise<ProductFromSheet[]> {
-  // Keep the temporary test product visible even before the Sheet URL is configured.
+/* =========================================================
+   CSV PARSER
+
+   Handles:
+   - commas inside quoted values
+   - quotes
+   - multi-line descriptions
+   - Windows/Mac line endings
+   - Google Sheets CSV output
+
+   No external npm package required.
+========================================================= */
+function parseCSV(csvText: string): Record<string, string>[] {
+  const text = csvText.replace(/^\uFEFF/, "");
+
+  const rows: string[][] = [];
+
+  let row: string[] = [];
+  let cell = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    // Handle quotes
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Escaped quote: ""
+        cell += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+
+      continue;
+    }
+
+    // Handle comma separator
+    if (char === "," && !insideQuotes) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    // Handle new line
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      // Handle Windows \r\n
+      if (char === "\r" && nextChar === "\n") {
+        i++;
+      }
+
+      row.push(cell);
+
+      const hasContent = row.some(
+        (value) => String(value ?? "").trim() !== ""
+      );
+
+      if (hasContent) {
+        rows.push(row);
+      }
+
+      row = [];
+      cell = "";
+
+      continue;
+    }
+
+    cell += char;
+  }
+
+  // Push final row
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+
+    const hasContent = row.some(
+      (value) => String(value ?? "").trim() !== ""
+    );
+
+    if (hasContent) {
+      rows.push(row);
+    }
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const headers = rows[0].map(normalizeHeader);
+
+  return rows.slice(1).map((columns) => {
+    const result: Record<string, string> = {};
+
+    headers.forEach((header, index) => {
+      if (!header) return;
+
+      result[header] = String(columns[index] ?? "").trim();
+    });
+
+    return result;
+  });
+}
+
+/* =========================================================
+   BOOLEAN CONVERTER
+
+   Supports:
+   true
+   TRUE
+   yes
+   Yes
+   1
+   y
+
+   Also:
+   false
+   no
+   0
+========================================================= */
+function toBool(value: any, fallback = false): boolean {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  if (
+    ["true", "1", "yes", "y", "active", "live"].includes(normalized)
+  ) {
+    return true;
+  }
+
+  if (
+    ["false", "0", "no", "n", "inactive", "hidden"].includes(normalized)
+  ) {
+    return false;
+  }
+
+  return fallback;
+}
+
+/* =========================================================
+   NUMBER CONVERTER
+
+   Supports values such as:
+
+   9.99
+   $9.99
+   1,299.99
+========================================================= */
+function toNum(value: any): number {
+  const original = String(value ?? "").trim();
+
+  if (!original) {
+    return 0;
+  }
+
+  const cleaned = original.replace(/[^0-9.-]/g, "");
+
+  if (!cleaned) {
+    return 0;
+  }
+
+  const number = Number(cleaned);
+
+  return Number.isFinite(number) ? number : 0;
+}
+
+/* =========================================================
+   GET PRODUCTS FROM GOOGLE SHEET
+========================================================= */
+export async function getProductsFromSheet(): Promise<
+  ProductFromSheet[]
+> {
   if (!SHEET_URL) {
-    return [TEST_PRODUCT_2];
+    console.error(
+      "Missing NEXT_PUBLIC_PRODUCTS_SHEET_URL environment variable"
+    );
+
+    return [];
   }
 
   try {
-    const res = await fetch(SHEET_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
-
-    const rawRows = (await res.json()) as any[];
-    const rows: SheetProduct[] = rawRows.map(cleanRowKeys);
-
-    const products = rows.map((r) => {
-      const prices: ProductFromSheet["prices"] = {
-        "250g": toNum((r as any).price_250g_usd),
-        "500g": toNum((r as any).price_500g_usd),
-        "1kg": toNum((r as any).price_1kg_usd),
-      };
-
-      const defaultWeight: ProductFromSheet["weight"] =
-        (prices["250g"] ?? 0) > 0
-          ? "250g"
-          : (prices["500g"] ?? 0) > 0
-          ? "500g"
-          : "1kg";
-
-      return {
-        id: String((r as any).product_id ?? "").trim(),
-        name: String((r as any).product_name ?? "").trim(),
-        category: String((r as any).category ?? "").trim(),
-        desc: (r as any).description ? String((r as any).description).trim() : "",
-        image: String((r as any).image_url ?? "").trim(),
-        out_of_stock: toBool((r as any).out_of_stock),
-        is_live: toBool((r as any).is_live ?? "true"),
-        prices,
-        weight: defaultWeight,
-        price: prices[defaultWeight] ?? 0,
-      } satisfies ProductFromSheet;
+    const response = await fetch(SHEET_URL, {
+      cache: "no-store",
     });
 
-    // TEMP: append Test Product 2 so it is easy to find in the product grid.
-    return [...products, TEST_PRODUCT_2];
+    if (!response.ok) {
+      throw new Error(
+        `Product sheet request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    /*
+      IMPORTANT:
+
+      Google is returning CSV.
+
+      Do NOT use:
+      await response.json()
+
+      We must read the response as text.
+    */
+    const csvText = await response.text();
+
+    if (!csvText.trim()) {
+      console.warn("Product Google Sheet returned empty CSV.");
+      return [];
+    }
+
+    const rows = parseCSV(csvText);
+
+    console.log(
+      `Google Sheet products received: ${rows.length}`
+    );
+
+    const products: ProductFromSheet[] = rows
+      .map((row) => {
+        const id = String(row.product_id ?? "").trim();
+
+        const name = String(
+          row.product_name ?? ""
+        ).trim();
+
+        const category = String(
+          row.category ?? ""
+        ).trim();
+
+        const description = String(
+          row.description ?? ""
+        ).trim();
+
+        const image = String(
+          row.image_url ?? ""
+        ).trim();
+
+        const prices: ProductFromSheet["prices"] = {
+          "250g": toNum(row.price_250g_usd),
+          "500g": toNum(row.price_500g_usd),
+          "1kg": toNum(row.price_1kg_usd),
+        };
+
+        /*
+          Pick the first available size as the default
+          product-card price.
+        */
+        let defaultWeight: ProductFromSheet["weight"];
+
+        if ((prices["250g"] ?? 0) > 0) {
+          defaultWeight = "250g";
+        } else if ((prices["500g"] ?? 0) > 0) {
+          defaultWeight = "500g";
+        } else {
+          defaultWeight = "1kg";
+        }
+
+        const product: ProductFromSheet = {
+          id,
+          name,
+          category,
+          desc: description,
+          image,
+
+          out_of_stock: toBool(
+            row.out_of_stock,
+            false
+          ),
+
+          /*
+            Blank is_live defaults to TRUE.
+
+            This prevents products disappearing simply
+            because the cell was left empty.
+          */
+          is_live: toBool(
+            row.is_live,
+            true
+          ),
+
+          prices,
+
+          weight: defaultWeight,
+
+          price:
+            prices[defaultWeight] ?? 0,
+        };
+
+        return product;
+      })
+
+      /*
+        Ignore accidental empty rows in Google Sheets.
+      */
+      .filter((product) => {
+        return Boolean(
+          product.id &&
+            product.name &&
+            product.category
+        );
+      });
+
+    console.log(
+      `Valid products loaded: ${products.length}`
+    );
+
+    return products;
   } catch (error) {
-    console.warn("Products sheet failed to load; showing Test Product 2 only.", error);
-    return [TEST_PRODUCT_2];
+    console.error(
+      "Failed to load products from Google Sheet:",
+      error
+    );
+
+    /*
+      Do NOT return Test Product here.
+
+      Returning [] makes a real Google Sheet error visible
+      instead of hiding the problem.
+    */
+    return [];
   }
 }
