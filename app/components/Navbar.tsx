@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MessageCircle, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
+
 import { useCart } from "./CartContext";
-import { getWhatsAppUrl, siteConfig } from "../lib/siteConfig";
+import WhatsAppButton from "./WhatsAppButton";
 
 export default function Navbar() {
   const cart = useCart();
@@ -15,83 +16,192 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-md bg-cream/90 border-b border-gold">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+    <nav
+      className="
+        sticky
+        top-0
+        z-50
+        border-b
+        border-gold
+        bg-cream/90
+        backdrop-blur-md
+      "
+    >
+      <div
+        className="
+          mx-auto
+          flex
+          max-w-7xl
+          items-center
+          justify-between
+          px-4
+          py-4
+          md:px-6
+        "
+      >
+        {/* =========================
+            BRAND
+        ========================== */}
         <Link
           href="/"
-          className="brand-logo text-4xl text-brown font-black tracking-wider"
+          className="
+            brand-logo
+            text-2xl
+            font-black
+            tracking-wider
+            text-brown
+            sm:text-3xl
+            md:text-4xl
+          "
           aria-label="Go to home"
         >
           Konaseema Specials
         </Link>
 
-        <div className="hidden md:flex gap-8 font-semibold items-center">
+        {/* =========================
+            DESKTOP MENU
+        ========================== */}
+        <div
+          className="
+            hidden
+            items-center
+            gap-8
+            font-semibold
+            md:flex
+          "
+        >
           <button
-            className="hover:text-gold transition-colors"
-            onClick={() => goToSection("home")}
             type="button"
+            onClick={() =>
+              goToSection("home")
+            }
+            className="
+              transition-colors
+              hover:text-gold
+            "
           >
             Home
           </button>
 
           <button
-            className="hover:text-gold transition-colors"
-            onClick={() => goToSection("categories")}
             type="button"
+            onClick={() =>
+              goToSection(
+                "categories"
+              )
+            }
+            className="
+              transition-colors
+              hover:text-gold
+            "
           >
             Categories
           </button>
 
           <button
-            className="hover:text-gold transition-colors"
-            onClick={() => goToSection("products")}
             type="button"
+            onClick={() =>
+              goToSection(
+                "products"
+              )
+            }
+            className="
+              transition-colors
+              hover:text-gold
+            "
           >
             Products
           </button>
 
           <button
-            className="hover:text-gold transition-colors"
-            onClick={() => goToSection("about")}
             type="button"
+            onClick={() =>
+              goToSection("about")
+            }
+            className="
+              transition-colors
+              hover:text-gold
+            "
           >
             About
           </button>
 
           <button
-            className="hover:text-gold transition-colors"
-            onClick={() => goToSection("contact")}
             type="button"
+            onClick={() =>
+              goToSection(
+                "contact"
+              )
+            }
+            className="
+              transition-colors
+              hover:text-gold
+            "
           >
             Contact
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {siteConfig.whatsappNumber && (
-            <a
-              href={getWhatsAppUrl()}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Chat on WhatsApp"
-              title="WhatsApp"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-green-700 active:scale-95"
-            >
-              <MessageCircle size={21} strokeWidth={2.2} />
-            </a>
-          )}
+        {/* =========================
+            RIGHT SIDE ACTIONS
+        ========================== */}
+        <div
+          className="
+            flex
+            items-center
+            gap-2
+          "
+        >
+          {/* WhatsApp */}
+          <WhatsAppButton />
 
+          {/* Cart */}
           <button
-            className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-gold/10 transition-colors"
+            type="button"
             onClick={cart.open}
             aria-label="Open cart"
-            type="button"
+            title="Cart"
+            className="
+              relative
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-full
+              transition-all
+              duration-200
+              hover:bg-gold/10
+              active:scale-95
+            "
           >
-            <ShoppingCart size={24} />
+            <ShoppingCart
+              size={24}
+              strokeWidth={2}
+            />
 
             {cart.count > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 flex items-center justify-center bg-gold text-brown text-xs font-bold rounded-full px-1">
-                {cart.count}
+              <span
+                className="
+                  absolute
+                  -right-1
+                  -top-1
+                  flex
+                  h-5
+                  min-w-[20px]
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-gold
+                  px-1
+                  text-xs
+                  font-bold
+                  text-brown
+                "
+              >
+                {cart.count > 99
+                  ? "99+"
+                  : cart.count}
               </span>
             )}
           </button>
