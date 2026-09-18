@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 
 import { useCart } from "./CartContext";
-import {
-  getWhatsAppUrl,
-  siteConfig,
-} from "../lib/siteConfig";
+import { getWhatsAppUrl } from "../lib/siteConfig";
 
 export default function Navbar() {
   const cart = useCart();
@@ -21,8 +18,7 @@ export default function Navbar() {
   const whatsappMessage =
     "Hi Konaseema Specials, I would like to know more about your products.";
 
-  const whatsappUrl =
-    getWhatsAppUrl(whatsappMessage);
+  const whatsappUrl = getWhatsAppUrl(whatsappMessage);
 
   return (
     <nav
@@ -140,7 +136,7 @@ export default function Navbar() {
             flex
             shrink-0
             items-center
-            gap-2
+            gap-3
           "
         >
           {/* CHAT / WHATSAPP */}
@@ -157,16 +153,14 @@ export default function Navbar() {
               w-10
               items-center
               justify-center
-              rounded-full
-              bg-[#25D366]
-              text-white
-              shadow-sm
+
+              text-brown
+
               transition-all
               duration-200
 
-              hover:scale-105
-              hover:bg-[#20bd5a]
-              hover:shadow-md
+              hover:scale-110
+              hover:text-gold
 
               active:scale-95
 
@@ -179,9 +173,15 @@ export default function Navbar() {
                 flex
                 items-center
                 justify-center
-                text-[23px]
+
+                text-[26px]
                 leading-none
-                sm:text-[25px]
+
+                grayscale
+                contrast-150
+                sepia
+
+                sm:text-[28px]
               "
               aria-hidden="true"
             >
@@ -204,11 +204,14 @@ export default function Navbar() {
               items-center
               justify-center
               rounded-full
+
               text-brown
+
               transition-all
               duration-200
 
               hover:bg-gold/10
+              hover:text-gold
 
               active:scale-95
 
@@ -221,20 +224,25 @@ export default function Navbar() {
               strokeWidth={2}
             />
 
+            {/* CART COUNT */}
+
             {cart.count > 0 && (
               <span
                 className="
                   absolute
                   -right-1
                   -top-1
+
                   flex
                   h-5
                   min-w-[20px]
                   items-center
                   justify-center
+
                   rounded-full
                   bg-gold
                   px-1
+
                   text-[11px]
                   font-bold
                   leading-none
