@@ -1,97 +1,369 @@
-const COMBO_SHEET_URL = process.env.NEXT_PUBLIC_COMBO_SHEET_URL?.trim();
+const COMBO_SHEET_URL =
+  process.env.NEXT_PUBLIC_COMBO_SHEET_URL?.trim();
 
 export type ComboItem = {
   name: string;
   weight: string;
 };
 
-/* ========================================
-   Combo product type
-   weight = total shipping weight
-======================================== */
 export type ComboProduct = {
   id: string;
   name: string;
+
   category: "Combos & Value Packs";
+
   image: string;
 
-  // price
   price: number;
 
-  // shipping weight used by cart
+  /*
+    Shipping weight.
+  */
   weight: string;
 
-  // original sheet field
+  /*
+    Original Google Sheet value.
+  */
   total_weight: string;
 
-  // combo flag
   is_combo: true;
 
   items: ComboItem[];
 };
 
-/* ========================================
-   Google GViz JSON parser
-======================================== */
-function parseGViz(text: string) {
-  const json = JSON.parse(text.substring(47, text.length - 2));
-  const cols = json.table.cols.map((c: any) => c.label);
+/* =========================================================
+   NORMALIZE GOOGLE SHEET COLUMN NAMES
 
-  return json.table.rows.map((r: any) => {
-    const obj: any = {};
-    r.c.forEach((cell: any, i: number) => {
-      obj[cols[i]] = cell?.v ?? "";
+   Examples:
+   Combo ID     -> combo_id
+   combo_id     -> combo_id
+   Combo Price  -> combo_price
+========================================================= */
+function normalizeHeader(value: string) {
+  return String(value ?? "")
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^\w]/g, "");
+}
+
+/* =========================================================
+   CSV PARSER
+
+   Handles Google Sheets CSV correctly:
+   - quoted commas
+   - quotes
+   - multiline cells
+   - CRLF
+   - empty cells
+
+   No external package required.
+========================================================= */
+function parseCSV(csvText: string): Record<string, string>[] {
+  const text = csvText.replace(/^\uFEFF/, "");
+
+  const rows: string[][] = [];
+
+  let row: string[] = [];
+  let cell = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    // Quote handling
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        cell += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+
+      continue;
+    }
+
+    // Column separator
+    if (char === "," && !insideQuotes) {
+      row.push(cell);
+      cell = "";
+
+      continue;
+    }
+
+    // New row
+    if (
+      (char === "\n" || char === "\r") &&
+      !insideQuotes
+    ) {
+      if (char === "\r" && nextChar === "\n") {
+        i++;
+      }
+
+      row.push(cell);
+
+      const hasContent = row.some(
+        (value) => String(value ?? "").trim() !== ""
+      );
+
+      if (hasContent) {
+        rows.push(row);
+      }
+
+      row = [];
+      cell = "";
+
+      continue;
+    }
+
+    cell += char;
+  }
+
+  // Final row
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+
+    const hasContent = row.some(
+      (value) => String(value ?? "").trim() !== ""
+    );
+
+    if (hasContent) {
+      rows.push(row);
+    }
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const headers = rows[0].map(normalizeHeader);
+
+  return rows.slice(1).map((columns) => {
+    const result: Record<string, string> = {};
+
+    headers.forEach((header, index) => {
+      if (!header) return;
+
+      result[header] = String(
+        columns[index] ?? ""
+      ).trim();
     });
-    return obj;
+
+    return result;
   });
 }
 
-/* ========================================
-   Fetch combos from sheet
-======================================== */
-export async function getCombosFromSheet(): Promise<ComboProduct[]> {
+/* =========================================================
+   PRICE CONVERTER
+========================================================= */
+function toNum(value: any): number {
+  const original = String(value ?? "").trim();
+
+  if (!original) {
+    return 0;
+  }
+
+  const cleaned = original.replace(
+    /[^0-9.-]/g,
+    ""
+  );
+
+  if (!cleaned) {
+    return 0;
+  }
+
+  const number = Number(cleaned);
+
+  return Number.isFinite(number)
+    ? number
+    : 0;
+}
+
+/* =========================================================
+   FETCH COMBOS FROM GOOGLE SHEET
+========================================================= */
+export async function getCombosFromSheet(): Promise<
+  ComboProduct[]
+> {
   if (!COMBO_SHEET_URL) {
-    throw new Error("Missing NEXT_PUBLIC_COMBO_SHEET_URL environment variable");
+    console.error(
+      "Missing NEXT_PUBLIC_COMBO_SHEET_URL environment variable"
+    );
+
+    return [];
   }
 
-  const res = await fetch(COMBO_SHEET_URL, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error("Failed to fetch combo sheet");
-  }
+  try {
+    const response = await fetch(
+      COMBO_SHEET_URL,
+      {
+        cache: "no-store",
+      }
+    );
 
-  const text = await res.text();
-  const rows = parseGViz(text);
-
-  const comboMap: Record<string, ComboProduct> = {};
-
-  for (const row of rows) {
-    const comboId = row.combo_id;
-    if (!comboId) continue;
-
-    if (!comboMap[comboId]) {
-      comboMap[comboId] = {
-        id: comboId,
-        name: row.combo_name,
-        category: "Combos & Value Packs",
-        image: row.combo_image,
-        price: Number(row.combo_price ?? 0),
-
-        // IMPORTANT: this is what shipping logic reads
-        weight: row.total_weight ?? "",
-
-        // original value from sheet
-        total_weight: row.total_weight ?? "",
-
-        is_combo: true,
-        items: [],
-      };
+    if (!response.ok) {
+      throw new Error(
+        `Combo sheet request failed: ${response.status} ${response.statusText}`
+      );
     }
 
-    comboMap[comboId].items.push({
-      name: row.item_name,
-      weight: row.item_weight,
-    });
-  }
+    /*
+      IMPORTANT:
 
-  return Object.values(comboMap);
+      The environment variable uses:
+
+      export?format=csv
+
+      Therefore Google returns CSV, NOT GViz JSON.
+    */
+    const csvText = await response.text();
+
+    if (!csvText.trim()) {
+      console.warn(
+        "Combo Google Sheet returned empty CSV."
+      );
+
+      return [];
+    }
+
+    const rows = parseCSV(csvText);
+
+    console.log(
+      `Google Sheet combo rows received: ${rows.length}`
+    );
+
+    const comboMap: Record<
+      string,
+      ComboProduct
+    > = {};
+
+    for (const row of rows) {
+      const comboId = String(
+        row.combo_id ?? ""
+      ).trim();
+
+      /*
+        Skip empty Google Sheet rows.
+      */
+      if (!comboId) {
+        continue;
+      }
+
+      const comboName = String(
+        row.combo_name ?? ""
+      ).trim();
+
+      const comboImage = String(
+        row.combo_image ?? ""
+      ).trim();
+
+      const comboPrice = toNum(
+        row.combo_price
+      );
+
+      const totalWeight = String(
+        row.total_weight ?? ""
+      ).trim();
+
+      /*
+        Create combo only once.
+
+        Multiple Google Sheet rows with the same
+        combo_id become multiple items inside
+        the same combo.
+      */
+      if (!comboMap[comboId]) {
+        comboMap[comboId] = {
+          id: comboId,
+
+          name:
+            comboName ||
+            `Combo ${comboId}`,
+
+          category:
+            "Combos & Value Packs",
+
+          image: comboImage,
+
+          price: comboPrice,
+
+          weight: totalWeight,
+
+          total_weight: totalWeight,
+
+          is_combo: true,
+
+          items: [],
+        };
+      }
+
+      /*
+        In case first row didn't contain some
+        combo-level information, allow a later
+        row to fill it.
+      */
+      if (
+        !comboMap[comboId].image &&
+        comboImage
+      ) {
+        comboMap[comboId].image =
+          comboImage;
+      }
+
+      if (
+        comboMap[comboId].price <= 0 &&
+        comboPrice > 0
+      ) {
+        comboMap[comboId].price =
+          comboPrice;
+      }
+
+      if (
+        !comboMap[comboId].total_weight &&
+        totalWeight
+      ) {
+        comboMap[comboId].total_weight =
+          totalWeight;
+
+        comboMap[comboId].weight =
+          totalWeight;
+      }
+
+      /*
+        Add item into combo.
+      */
+      const itemName = String(
+        row.item_name ?? ""
+      ).trim();
+
+      const itemWeight = String(
+        row.item_weight ?? ""
+      ).trim();
+
+      if (itemName) {
+        comboMap[comboId].items.push({
+          name: itemName,
+          weight: itemWeight,
+        });
+      }
+    }
+
+    const combos =
+      Object.values(comboMap);
+
+    console.log(
+      `Valid combos loaded: ${combos.length}`
+    );
+
+    return combos;
+  } catch (error) {
+    console.error(
+      "Failed to load combos from Google Sheet:",
+      error
+    );
+
+    return [];
+  }
 }
