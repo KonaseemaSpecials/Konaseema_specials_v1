@@ -185,7 +185,7 @@ export default function Navbar() {
               "
               aria-hidden="true"
             >
-              💭
+              💬
             </span>
           </a>
 
