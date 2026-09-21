@@ -51,7 +51,7 @@ export default function Hero({ special }: any) {
               <div className="text-sm">Packed Daily</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">Pan-India</div>
+              <div className="text-2xl font-bold">Abroad Orders</div>
               <div className="text-sm">Shipping</div>
             </div>
             <div>
