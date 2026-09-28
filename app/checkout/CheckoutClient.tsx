@@ -25,8 +25,6 @@ function makeTable(headers: string[], rows: string[][]) {
   const widths = headers.map((h, i) =>
     Math.max(
       h.length,
-
-      
       ...rows.map((r) => (r[i] ? r[i].length : 0))
     )
   );
@@ -280,13 +278,14 @@ export default function CheckoutClient() {
       const rows = (cart.items || []).map(
         (item: any) => [
           item.name,
+          item.weight || "-",
           String(item.qty),
           formatPrice(Number(item.price)),
         ]
       );
 
       const table = makeTable(
-        ["Item", "Qty", "Price"],
+        ["Item", "Weight", "Qty", "Price"],
         rows
       );
 
@@ -420,7 +419,7 @@ ${
                 (cart.items || []).map(
                   (item: any) => (
                     <div
-                      key={item.id}
+                      key={`${item.id}__${item.weight}`}
                       className="flex justify-between mb-2 gap-4"
                     >
                       <span>
