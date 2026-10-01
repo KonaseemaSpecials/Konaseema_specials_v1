@@ -152,6 +152,9 @@ export default function CheckoutClient() {
   const formatPrice = (v: number) =>
     `$${v.toFixed(2)}`;
 
+  // -----------------------------
+  // Product Subtotal
+  // -----------------------------
   const subtotal = useMemo(() => {
     return (cart.items || []).reduce(
       (sum: number, item: any) =>
@@ -161,13 +164,17 @@ export default function CheckoutClient() {
     );
   }, [cart.items]);
 
-  /*
-   * Shipping is no longer calculated automatically.
-   * The shipping cost will be discussed and confirmed
-   * with the customer on WhatsApp.
-   */
+  // -----------------------------
+  // Shipping
+  // -----------------------------
+  // Shipping is NOT calculated automatically.
+  // It will be discussed and confirmed
+  // through WhatsApp.
   const shippingFee = 0;
 
+  // This is only the product subtotal.
+  // The final amount will be confirmed
+  // after shipping charges are discussed.
   const total = subtotal + shippingFee;
 
   const onPlaceOrder = () => {
@@ -215,7 +222,7 @@ export default function CheckoutClient() {
 
       // -----------------------------
       // Generate Order Date
-      // Example: 18 Sep 2026
+      // Example: 02 Oct 2026
       // -----------------------------
       const now = new Date();
 
@@ -252,18 +259,18 @@ export default function CheckoutClient() {
       );
 
       // -----------------------------
-      // WhatsApp Order Message
+      // WhatsApp Customer Order Message
       // -----------------------------
       const message = `🛍️ *KONASEEMA SPECIALS*
 ━━━━━━━━━━━━━━━━━━━━
 
-✅ *ORDER CONFIRMED*
+📋 *NEW ORDER REQUEST*
 
 🧾 Order ID: *${orderId}*
 📅 Order Date: ${orderDate}
 
 ━━━━━━━━━━━━━━━━━━━━
-📦 *ORDER SUMMARY*
+📦 *ORDER DETAILS*
 ━━━━━━━━━━━━━━━━━━━━
 
 \`\`\`
@@ -271,13 +278,13 @@ ${table}
 \`\`\`
 
 ━━━━━━━━━━━━━━━━━━━━
-💰 *PAYMENT SUMMARY*
+💰 *ORDER SUMMARY*
 ━━━━━━━━━━━━━━━━━━━━
 
-Subtotal: ${formatPrice(subtotal)}
-Shipping: *To be discussed on WhatsApp*
-────────────────────
-*TOTAL: ${formatPrice(total)}*
+Products Total: ${formatPrice(subtotal)}
+Shipping Charges: *To be confirmed*
+
+💵 *FINAL AMOUNT: To be confirmed*
 
 ━━━━━━━━━━━━━━━━━━━━
 👤 *CUSTOMER DETAILS*
@@ -301,7 +308,7 @@ ${shipping.zip}
 ${shipping.country}
 
 ━━━━━━━━━━━━━━━━━━━━
-📝 *Delivery Notes*
+📝 *DELIVERY NOTES*
 ━━━━━━━━━━━━━━━━━━━━
 
 ${
@@ -311,14 +318,10 @@ ${
 
 ━━━━━━━━━━━━━━━━━━━━
 
-🚚 *Shipping charges and delivery details will be discussed and confirmed on WhatsApp.*
+📲 Please confirm the shipping charges
+and let me know the final amount payable.
 
-💬 Please confirm the shipping cost and delivery arrangements with us on WhatsApp.
-
-🎉 Thank you for choosing
-*Konaseema Specials!*
-
-🌴 *Tradition in Every Bite*`;
+Thank you!`;
 
       const whatsappUrl =
         getWhatsAppUrl(message);
@@ -363,14 +366,18 @@ ${
 
       <main className="min-h-screen bg-cream pt-28 pb-16">
         <div className="max-w-6xl mx-auto px-5">
+
           <h1 className="text-4xl font-extrabold text-brown mb-8">
             Checkout
           </h1>
 
           <div className="grid lg:grid-cols-2 gap-8">
 
-            {/* ORDER SUMMARY */}
+            {/* =========================
+                ORDER SUMMARY
+            ========================== */}
             <section className="card p-6">
+
               <h2 className="text-xl font-bold mb-4">
                 Order Summary
               </h2>
@@ -411,6 +418,7 @@ ${
 
               <div className="border-t mt-5 pt-4 space-y-2 font-semibold">
 
+                {/* PRODUCT SUBTOTAL */}
                 <div className="flex justify-between">
                   <span>
                     Subtotal
@@ -423,22 +431,23 @@ ${
                   </span>
                 </div>
 
-                {(cart.items || [])
-                  .length > 0 && (
+                {/* SHIPPING */}
+                {(cart.items || []).length > 0 && (
                   <div className="flex justify-between items-start gap-4">
                     <span>
                       Shipping
                     </span>
 
                     <span className="text-right text-sm">
-                      To be discussed on WhatsApp
+                      To be confirmed
                     </span>
                   </div>
                 )}
 
+                {/* AMOUNT */}
                 <div className="flex justify-between text-lg border-t pt-2">
                   <span>
-                    Total
+                    Product Total
                   </span>
 
                   <span>
@@ -447,26 +456,30 @@ ${
                     )}
                   </span>
                 </div>
+
               </div>
 
               <p className="mt-6 text-sm opacity-70">
-                Your order details will
-                be sent to Konaseema
-                Specials on WhatsApp for
-                confirmation. Shipping
-                charges will be discussed
-                and confirmed there.
+                Shipping charges will be
+                discussed and confirmed
+                with you on WhatsApp before
+                the final amount is confirmed.
               </p>
+
             </section>
 
-            {/* SHIPPING DETAILS */}
+            {/* =========================
+                CUSTOMER DETAILS
+            ========================== */}
             <section className="card p-6">
+
               <h2 className="text-xl font-bold mb-4">
                 Shipping Details
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4">
 
+                {/* FULL NAME */}
                 <Field
                   label="Full Name *"
                   value={
@@ -487,9 +500,12 @@ ${
                   }`}
                 />
 
+                {/* EMAIL */}
                 <Field
                   label="Email *"
-                  value={shipping.email}
+                  value={
+                    shipping.email
+                  }
                   onChange={(v) =>
                     setShipping({
                       ...shipping,
@@ -497,15 +513,20 @@ ${
                     })
                   }
                   className={`${inputBase} ${
-                    showErr("email")
+                    showErr(
+                      "email"
+                    )
                       ? inputErr
                       : ""
                   }`}
                 />
 
+                {/* PHONE */}
                 <Field
                   label="Phone *"
-                  value={shipping.phone}
+                  value={
+                    shipping.phone
+                  }
                   onChange={(v) =>
                     setShipping({
                       ...shipping,
@@ -513,12 +534,15 @@ ${
                     })
                   }
                   className={`${inputBase} ${
-                    showErr("phone")
+                    showErr(
+                      "phone"
+                    )
                       ? inputErr
                       : ""
                   }`}
                 />
 
+                {/* COUNTRY */}
                 <Field
                   label="Country *"
                   value={
@@ -539,6 +563,7 @@ ${
                   }`}
                 />
 
+                {/* ADDRESS 1 */}
                 <Field
                   label="Address Line 1 *"
                   value={
@@ -559,6 +584,7 @@ ${
                   }`}
                 />
 
+                {/* ADDRESS 2 */}
                 <Field
                   label="Address Line 2"
                   value={
@@ -575,6 +601,7 @@ ${
                   }
                 />
 
+                {/* CITY */}
                 <Field
                   label="City *"
                   value={
@@ -587,12 +614,15 @@ ${
                     })
                   }
                   className={`${inputBase} ${
-                    showErr("city")
+                    showErr(
+                      "city"
+                    )
                       ? inputErr
                       : ""
                   }`}
                 />
 
+                {/* STATE */}
                 <Field
                   label="State *"
                   value={
@@ -605,15 +635,20 @@ ${
                     })
                   }
                   className={`${inputBase} ${
-                    showErr("state")
+                    showErr(
+                      "state"
+                    )
                       ? inputErr
                       : ""
                   }`}
                 />
 
+                {/* ZIP */}
                 <Field
                   label="ZIP / Postal *"
-                  value={shipping.zip}
+                  value={
+                    shipping.zip
+                  }
                   onChange={(v) =>
                     setShipping({
                       ...shipping,
@@ -621,13 +656,17 @@ ${
                     })
                   }
                   className={`${inputBase} ${
-                    showErr("zip")
+                    showErr(
+                      "zip"
+                    )
                       ? inputErr
                       : ""
                   }`}
                 />
 
+                {/* DELIVERY NOTES */}
                 <div className="md:col-span-2">
+
                   <label className="block text-sm font-semibold mb-1">
                     Delivery Notes
                   </label>
@@ -641,20 +680,23 @@ ${
                       setShipping({
                         ...shipping,
                         deliveryNotes:
-                          e.target
-                            .value,
+                          e.target.value,
                       })
                     }
                   />
+
                 </div>
+
               </div>
 
+              {/* ERROR */}
               {saveError && (
                 <div className="mt-4 text-sm text-red-600">
                   {saveError}
                 </div>
               )}
 
+              {/* WHATSAPP BUTTON */}
               <button
                 className="btn-primary mt-6 w-full"
                 onClick={
@@ -668,11 +710,11 @@ ${
               >
                 {saving
                   ? "Opening WhatsApp..."
-                  : `Continue on WhatsApp (${formatPrice(
-                      total
-                    )})`}
+                  : "Send Order on WhatsApp"}
               </button>
+
             </section>
+
           </div>
         </div>
       </main>
@@ -695,6 +737,7 @@ function Field({
 }) {
   return (
     <div>
+
       <label className="block text-sm font-semibold mb-1">
         {label}
       </label>
@@ -708,6 +751,7 @@ function Field({
           )
         }
       />
+
     </div>
   );
 }
