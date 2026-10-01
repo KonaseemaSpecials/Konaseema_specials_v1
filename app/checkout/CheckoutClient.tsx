@@ -152,33 +152,6 @@ export default function CheckoutClient() {
   const formatPrice = (v: number) =>
     `$${v.toFixed(2)}`;
 
-  const getWeightInKg = (w: string) => {
-    if (!w) return 0;
-
-    const value = parseFloat(w);
-
-    if (isNaN(value)) return 0;
-
-    if (w.toLowerCase().includes("kg")) {
-      return value;
-    }
-
-    if (w.toLowerCase().includes("g")) {
-      return value / 1000;
-    }
-
-    return 0;
-  };
-
-  const getShipping = (weightKg: number) => {
-    if (weightKg <= 5) return 29;
-    if (weightKg <= 7.5) return 35;
-    if (weightKg <= 10) return 40;
-    if (weightKg <= 15) return 50;
-
-    return 60;
-  };
-
   const subtotal = useMemo(() => {
     return (cart.items || []).reduce(
       (sum: number, item: any) =>
@@ -188,23 +161,12 @@ export default function CheckoutClient() {
     );
   }, [cart.items]);
 
-  const totalWeight = useMemo(() => {
-    return (cart.items || []).reduce(
-      (sum: number, item: any) => {
-        return (
-          sum +
-          getWeightInKg(item.weight) *
-            Number(item.qty)
-        );
-      },
-      0
-    );
-  }, [cart.items]);
-
-  const shippingFee =
-    (cart.items || []).length > 0
-      ? getShipping(totalWeight)
-      : 0;
+  /*
+   * Shipping is no longer calculated automatically.
+   * The shipping cost will be discussed and confirmed
+   * with the customer on WhatsApp.
+   */
+  const shippingFee = 0;
 
   const total = subtotal + shippingFee;
 
@@ -313,7 +275,7 @@ ${table}
 ━━━━━━━━━━━━━━━━━━━━
 
 Subtotal: ${formatPrice(subtotal)}
-Shipping: ${formatPrice(shippingFee)}
+Shipping: *To be discussed on WhatsApp*
 ────────────────────
 *TOTAL: ${formatPrice(total)}*
 
@@ -349,7 +311,9 @@ ${
 
 ━━━━━━━━━━━━━━━━━━━━
 
-🚚 We'll keep you updated about your order.
+🚚 *Shipping charges and delivery details will be discussed and confirmed on WhatsApp.*
+
+💬 Please confirm the shipping cost and delivery arrangements with us on WhatsApp.
 
 🎉 Thank you for choosing
 *Konaseema Specials!*
@@ -436,12 +400,8 @@ ${
 
                       <span>
                         {formatPrice(
-                          Number(
-                            item.qty
-                          ) *
-                            Number(
-                              item.price
-                            )
+                          Number(item.qty) *
+                          Number(item.price)
                         )}
                       </span>
                     </div>
@@ -465,19 +425,13 @@ ${
 
                 {(cart.items || [])
                   .length > 0 && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-start gap-4">
                     <span>
-                      Shipping (
-                      {totalWeight.toFixed(
-                        1
-                      )}{" "}
-                      kg)
+                      Shipping
                     </span>
 
-                    <span>
-                      {formatPrice(
-                        shippingFee
-                      )}
+                    <span className="text-right text-sm">
+                      To be discussed on WhatsApp
                     </span>
                   </div>
                 )}
@@ -499,7 +453,9 @@ ${
                 Your order details will
                 be sent to Konaseema
                 Specials on WhatsApp for
-                confirmation.
+                confirmation. Shipping
+                charges will be discussed
+                and confirmed there.
               </p>
             </section>
 
